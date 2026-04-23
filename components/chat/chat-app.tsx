@@ -16,8 +16,16 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { MessageMarkdown } from "@/components/chat/message-markdown";
 import { ThemeToggle } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -29,13 +37,16 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
+import { DEFAULT_MODEL_ID, MODEL_SUGGESTIONS } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
 export function ChatApp() {
   const router = useRouter();
   const viewer = useQuery(api.users.viewer);
   const chats = useQuery(api.chats.list, viewer ? {} : "skip");
+  const settings = useQuery(api.settings.get, viewer ? {} : "skip");
   const [activeChatId, setActiveChatId] = useState<Id<"chats"> | null>(null);
+  const [draftModelId, setDraftModelId] = useState<string | null>(null);
   const effectiveChatId = useMemo(() => {
     if (!viewer || !chats?.length) {
       return null;
@@ -53,6 +64,7 @@ export function ChatApp() {
   );
 
   const createChat = useMutation(api.chats.create);
+  const updateChatModel = useMutation(api.chats.updateModel);
   const completeTurn = useAction(api.ai.completeTurn);
   const genUpload = useMutation(api.files.generateUploadUrl);
   const registerUpload = useMutation(api.files.registerUpload);
@@ -87,6 +99,9 @@ export function ChatApp() {
     }
     return chats.find((c) => c._id === effectiveChatId) ?? null;
   }, [chats, effectiveChatId]);
+
+  const selectedModelId =
+    activeChat?.modelId ?? draftModelId ?? settings?.modelId ?? DEFAULT_MODEL_ID;
 
   async function onSignOut() {
     await authClient.signOut({
@@ -150,8 +165,16 @@ export function ChatApp() {
     if (!viewer) {
       return;
     }
-    const id = await createChat({});
+    const id = await createChat({ modelId: selectedModelId });
     setActiveChatId(id);
+  }
+
+  async function onSelectModel(modelId: string) {
+    if (activeChat) {
+      await updateChatModel({ chatId: activeChat._id, modelId });
+      return;
+    }
+    setDraftModelId(modelId);
   }
 
   if (viewer === undefined) {
@@ -221,6 +244,27 @@ export function ChatApp() {
           </div>
 
           <div className="ml-auto flex items-center gap-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="max-w-44 justify-between">
+                  <span className="truncate">{selectedModelId}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuRadioGroup
+                  value={selectedModelId}
+                  onValueChange={(value) => {
+                    void onSelectModel(value);
+                  }}
+                >
+                  {MODEL_SUGGESTIONS.map((modelId) => (
+                    <DropdownMenuRadioItem key={modelId} value={modelId}>
+                      {modelId}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="relative hidden max-w-[220px] items-center sm:flex">
               <MagnifyingGlass className="text-muted-foreground absolute left-2 size-4" />
               <Input
@@ -293,7 +337,11 @@ export function ChatApp() {
                       : "bg-muted text-foreground",
                   )}
                 >
-                  {m.text}
+                  {m.role === "assistant" ? (
+                    <MessageMarkdown>{m.text}</MessageMarkdown>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{m.text}</p>
+                  )}
                   {m.imageStorageIds?.length ? (
                     <p className="text-muted-foreground mt-1 text-xs">
                       {m.imageStorageIds.length} attachment(s)

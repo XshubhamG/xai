@@ -69,7 +69,7 @@ export const completeTurn = action({
       },
     });
 
-    const modelId = settings.modelId ?? "openai/gpt-4o-mini";
+    const modelId = chat?.modelId ?? settings.modelId ?? "openai/gpt-4o-mini";
 
     const system = [
       settings.systemPrompt,

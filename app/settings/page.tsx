@@ -22,13 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
-
-const MODEL_SUGGESTIONS = [
-  "openai/gpt-4o-mini",
-  "openai/gpt-4o",
-  "anthropic/claude-3.5-sonnet",
-  "google/gemini-2.0-flash-001",
-];
+import { MODEL_SUGGESTIONS } from "@/lib/models";
 
 type SettingsFormInit = Pick<
   Doc<"userSettings">,

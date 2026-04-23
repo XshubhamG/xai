@@ -5,6 +5,7 @@ export default defineSchema({
   chats: defineTable({
     userId: v.string(),
     title: v.string(),
+    modelId: v.optional(v.string()),
     updatedAt: v.number(),
   }).index("by_user_updated", ["userId", "updatedAt"]),
 

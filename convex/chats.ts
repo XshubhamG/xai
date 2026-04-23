@@ -3,6 +3,7 @@ import { mutation, query } from "./_generated/server";
 import { requireUserId } from "./lib/requireUser";
 
 const TITLE_MAX = 200;
+const MODEL_MAX = 200;
 
 export const list = query({
   args: {},
@@ -29,14 +30,18 @@ export const get = query({
 });
 
 export const create = mutation({
-  args: { title: v.optional(v.string()) },
-  handler: async (ctx, { title }) => {
+  args: {
+    title: v.optional(v.string()),
+    modelId: v.optional(v.string()),
+  },
+  handler: async (ctx, { title, modelId }) => {
     const userId = await requireUserId(ctx);
     const safeTitle = (title ?? "New chat").slice(0, TITLE_MAX);
     const now = Date.now();
     return await ctx.db.insert("chats", {
       userId,
       title: safeTitle,
+      modelId: modelId?.slice(0, MODEL_MAX),
       updatedAt: now,
     });
   },
@@ -55,6 +60,24 @@ export const updateTitle = mutation({
     }
     await ctx.db.patch(chatId, {
       title: title.slice(0, TITLE_MAX),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+export const updateModel = mutation({
+  args: {
+    chatId: v.id("chats"),
+    modelId: v.string(),
+  },
+  handler: async (ctx, { chatId, modelId }) => {
+    const userId = await requireUserId(ctx);
+    const chat = await ctx.db.get(chatId);
+    if (!chat || chat.userId !== userId) {
+      throw new Error("Chat not found");
+    }
+    await ctx.db.patch(chatId, {
+      modelId: modelId.slice(0, MODEL_MAX),
       updatedAt: Date.now(),
     });
   },
