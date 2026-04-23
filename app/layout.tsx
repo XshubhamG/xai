@@ -1,8 +1,16 @@
+import { Metadata } from "next"
 import { Geist, Geist_Mono, Roboto_Slab } from "next/font/google"
 
 import "./globals.css"
+import { ConvexClientProvider } from "@/components/convex-provider"
 import { ThemeProvider } from "@/components/theme-provider"
-import { cn } from "@/lib/utils";
+import { getToken } from "@/lib/auth-server"
+import { cn } from "@/lib/utils"
+
+export const metadata: Metadata = {
+  title: "xai",
+  description: "XAI Chat Application",
+}
 
 const robotoSlabHeading = Roboto_Slab({subsets:['latin'],variable:'--font-heading'});
 
@@ -13,11 +21,12 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 })
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const token = await getToken()
   return (
     <html
       lang="en"
@@ -25,7 +34,9 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, robotoSlabHeading.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ConvexClientProvider initialToken={token}>
+          <ThemeProvider>{children}</ThemeProvider>
+        </ConvexClientProvider>
       </body>
     </html>
   )
