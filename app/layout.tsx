@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { Geist, Geist_Mono, Roboto_Slab } from "next/font/google"
 
 import "./globals.css"
+import "katex/dist/katex.min.css"
 import { ConvexClientProvider } from "@/components/convex-provider"
 import { ThemeProvider } from "@/components/theme-provider"
 import { getToken } from "@/lib/auth-server"
@@ -31,9 +32,9 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", geist.variable, robotoSlabHeading.variable)}
+      className={cn("antialiased overflow-x-hidden", fontMono.variable, "font-sans", geist.variable, robotoSlabHeading.variable)}
     >
-      <body>
+      <body className="overflow-x-hidden">
         <ConvexClientProvider initialToken={token}>
           <ThemeProvider>{children}</ThemeProvider>
         </ConvexClientProvider>

@@ -1,13 +1,21 @@
 "use client";
 
 import {
+  ArrowsClockwise,
   ChatCircle,
   ChatsTeardrop,
+  Check,
+  Copy,
+  DotsThree,
+  Export,
   Image as ImageIcon,
   MagnifyingGlass,
   PaperPlaneRight,
   Plus,
   SignOut,
+  ThumbsDown,
+  ThumbsUp,
+  Trash,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,6 +27,14 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { MessageMarkdown } from "@/components/chat/message-markdown";
 import { ThemeToggle } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +56,26 @@ import { authClient } from "@/lib/auth-client";
 import { DEFAULT_MODEL_ID, MODEL_SUGGESTIONS } from "@/lib/models";
 import { cn } from "@/lib/utils";
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const onCopy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      title="Copy"
+      className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+      onClick={onCopy}
+    >
+      {copied ? <Check className="size-4 text-green-500" /> : <Copy className="size-4" />}
+    </button>
+  );
+}
+
 export function ChatApp() {
   const router = useRouter();
   const viewer = useQuery(api.users.viewer);
@@ -58,24 +94,36 @@ export function ChatApp() {
   }, [activeChatId, chats, viewer]);
   const messages = useQuery(
     api.messages.listByChat,
-    effectiveChatId
-      ? { chatId: effectiveChatId, limit: 120 }
-      : "skip",
+    effectiveChatId ? { chatId: effectiveChatId, limit: 120 } : "skip",
   );
 
   const createChat = useMutation(api.chats.create);
   const updateChatModel = useMutation(api.chats.updateModel);
   const completeTurn = useAction(api.ai.completeTurn);
+  const regenerate = useAction(api.ai.regenerate);
+  const removeChat = useMutation(api.chats.remove);
   const genUpload = useMutation(api.files.generateUploadUrl);
   const registerUpload = useMutation(api.files.registerUpload);
 
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [images, setImages] = useState<Id<"_storage">[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQ.trim()), 320);
@@ -85,7 +133,7 @@ export function ChatApp() {
   const searchHits = useQuery(
     api.messages.search,
     viewer && debouncedSearch.length > 0
-      ? { query: debouncedSearch, limit: 24 }
+      ? { query: debouncedSearch, limit: 10 }
       : "skip",
   );
 
@@ -139,7 +187,7 @@ export function ChatApp() {
   );
 
   async function onSend() {
-    if (!viewer || !effectiveChatId || pending) {
+    if (!viewer || pending) {
       return;
     }
     const text = draft.trim();
@@ -151,11 +199,18 @@ export function ChatApp() {
     const toSend = [...images];
     setImages([]);
     try {
+      let chatId = effectiveChatId;
+      if (!chatId) {
+        chatId = await createChat({ modelId: selectedModelId });
+        setActiveChatId(chatId);
+      }
       await completeTurn({
-        chatId: effectiveChatId,
+        chatId,
         userText: text,
         imageStorageIds: toSend.length ? toSend : undefined,
       });
+    } catch (error) {
+      console.error("Failed to send message:", error);
     } finally {
       setPending(false);
     }
@@ -177,6 +232,25 @@ export function ChatApp() {
     setDraftModelId(modelId);
   }
 
+  async function onRegenerate(messageId: Id<"messages">) {
+    if (!effectiveChatId || pending) return;
+    setPending(true);
+    try {
+      await regenerate({ chatId: effectiveChatId, messageId });
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function onDeleteChat(chatId: Id<"chats">) {
+    if (!viewer) return;
+    const isDeletingActive = chatId === activeChatId;
+    await removeChat({ chatId });
+    if (isDeletingActive) {
+      setActiveChatId(null);
+    }
+  }
+
   if (viewer === undefined) {
     return (
       <div className="text-muted-foreground flex min-h-svh items-center justify-center p-8 text-sm">
@@ -188,9 +262,7 @@ export function ChatApp() {
   if (viewer === null) {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center gap-4 p-8">
-        <p className="text-muted-foreground text-sm">
-          Sign in to use the chat.
-        </p>
+        <p className="text-muted-foreground text-sm">Sign in to use the chat.</p>
         <Button asChild>
           <Link href="/sign-in">Sign in</Link>
         </Button>
@@ -198,8 +270,10 @@ export function ChatApp() {
     );
   }
 
+  const isEmpty = !messages || messages.length === 0;
+
   return (
-    <div className="bg-background flex min-h-svh w-full flex-col md:flex-row">
+    <div className="bg-background flex min-h-svh w-full max-w-full overflow-x-hidden flex-col md:flex-row">
       <aside className="border-border/80 hidden h-svh w-72 shrink-0 flex-col border-r md:flex">
         <div className="flex items-center gap-2 border-b px-3 py-3">
           <ChatsTeardrop className="size-5" weight="duotone" />
@@ -210,6 +284,7 @@ export function ChatApp() {
           activeChatId={activeChatId}
           onSelect={setActiveChatId}
           onNew={onNewChat}
+          onDelete={onDeleteChat}
         />
       </aside>
 
@@ -232,6 +307,7 @@ export function ChatApp() {
                   setActiveChatId(id);
                 }}
                 onNew={onNewChat}
+                onDelete={onDeleteChat}
               />
             </SheetContent>
           </Sheet>
@@ -265,16 +341,47 @@ export function ChatApp() {
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-            <div className="relative hidden max-w-[220px] items-center sm:flex">
-              <MagnifyingGlass className="text-muted-foreground absolute left-2 size-4" />
-              <Input
-                aria-label="Search messages"
-                placeholder="Search…"
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-muted-foreground relative hidden h-9 w-full max-w-[220px] justify-start rounded-[0.5rem] text-sm font-normal sm:flex"
+              onClick={() => setSearchOpen(true)}
+            >
+              <MagnifyingGlass className="mr-2 size-4" />
+              <span>Search messages…</span>
+              <kbd className="bg-muted pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-6 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </Button>
+
+            <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+              <CommandInput
+                placeholder="Search all messages…"
                 value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                className="h-9 pl-8"
+                onValueChange={setSearchQ}
               />
-            </div>
+              <CommandList>
+                <CommandEmpty>No results found.</CommandEmpty>
+                {searchHits && searchHits.length > 0 && (
+                  <CommandGroup heading="Results">
+                    {searchHits.map((m) => (
+                      <CommandItem
+                        key={m._id}
+                        onSelect={() => {
+                          setActiveChatId(m.chatId);
+                          setSearchOpen(false);
+                          setSearchQ("");
+                        }}
+                      >
+                        <ChatCircle className="mr-2 size-4" />
+                        <span className="line-clamp-1">{m.text}</span>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </CommandList>
+            </CommandDialog>
+
             <Button variant="outline" size="icon" asChild title="Settings">
               <Link href="/settings">
                 <span className="sr-only">Settings</span>
@@ -290,140 +397,203 @@ export function ChatApp() {
           </div>
         </header>
 
-        {debouncedSearch.length > 0 ? (
-          <div className="border-border/80 bg-muted/30 max-h-40 border-b px-3 py-2">
-            <p className="text-muted-foreground mb-2 text-xs">
-              Results ({searchHits?.length ?? 0})
-            </p>
-            <ScrollArea className="h-24 pr-2">
-              <ul className="space-y-1 text-sm">
-                {(searchHits ?? []).map((m) => (
-                  <li key={m._id}>
-                    <button
-                      type="button"
-                      className="hover:bg-muted/80 w-full rounded-md px-2 py-1 text-left"
-                      onClick={() => {
-                        setActiveChatId(m.chatId);
-                        setSearchQ("");
-                        setDebouncedSearch("");
-                      }}
-                    >
-                      <span className="text-muted-foreground line-clamp-2">
-                        {m.text}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </ScrollArea>
-          </div>
-        ) : null}
-
         <ScrollArea className="min-h-0 flex-1">
-          <div className="mx-auto max-w-3xl space-y-4 px-3 py-4">
-            {(messages ?? []).map((m) => (
-              <div
-                key={m._id}
-                className={cn(
-                  "flex",
-                  m.role === "user" ? "justify-end" : "justify-start",
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed wrap-break-word",
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground",
-                  )}
-                >
-                  {m.role === "assistant" ? (
-                    <MessageMarkdown>{m.text}</MessageMarkdown>
-                  ) : (
-                    <p className="whitespace-pre-wrap">{m.text}</p>
-                  )}
-                  {m.imageStorageIds?.length ? (
-                    <p className="text-muted-foreground mt-1 text-xs">
-                      {m.imageStorageIds.length} attachment(s)
-                    </p>
-                  ) : null}
-                </div>
+          {isEmpty ? (
+            <div className="flex min-h-[calc(100svh-120px)] flex-col items-center justify-center px-6">
+              <div className="mb-8 flex flex-col items-center gap-4 text-center">
+                <ChatCircle className="text-muted-foreground size-12" weight="duotone" />
+                <h2 className="font-heading text-2xl font-medium">How can I help you today?</h2>
               </div>
-            ))}
-            <div ref={bottomRef} />
-          </div>
-        </ScrollArea>
-
-        <footer className="border-border/80 bg-background/80 supports-backdrop-filter:bg-background/60 sticky bottom-0 border-t px-3 py-3 backdrop-blur">
-          {!effectiveChatId ? (
-            <p className="text-muted-foreground text-center text-sm">
-              Create a chat to start messaging.
-            </p>
+              <ChatInput
+                isCentered
+                images={images}
+                draft={draft}
+                setDraft={setDraft}
+                pending={pending}
+                onSend={onSend}
+                onPickImage={onPickImage}
+                fileInputRef={fileInputRef}
+              />
+            </div>
           ) : (
-            <div className="mx-auto flex max-w-3xl flex-col gap-2">
-              {images.length > 0 ? (
-                <p className="text-muted-foreground text-xs">
-                  {images.length} image(s) ready to send
-                </p>
-              ) : null}
-              <div className="flex gap-2">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => void onPickImage(e.target.files?.[0] ?? null)}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => fileInputRef.current?.click()}
+            <div className="mx-auto max-w-3xl space-y-8 px-3 py-4 pb-20">
+              {(messages ?? []).map((m) => (
+                <div
+                  key={m._id}
+                  className={cn("flex flex-col gap-2", m.role === "user" ? "items-end" : "items-start")}
                 >
-                  <ImageIcon className="size-5" weight="bold" />
-                </Button>
-                <Textarea
-                  rows={3}
-                  placeholder="Message…"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  className="min-h-[80px] flex-1 resize-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      void onSend();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  className="shrink-0 self-end"
-                  disabled={pending}
-                  onClick={() => void onSend()}
-                  title="Send"
-                >
-                  <PaperPlaneRight className="size-5" weight="fill" />
-                </Button>
-              </div>
+                  <div
+                    className={cn(
+                      "text-sm leading-relaxed break-words overflow-wrap-anywhere",
+                      m.role === "user"
+                        ? "bg-primary text-primary-foreground max-w-[85%] rounded-2xl px-3 py-2"
+                        : "text-foreground w-full",
+                    )}
+                  >
+                    {m.role === "assistant" ? (
+                      <div className="space-y-4">
+                        <MessageMarkdown>{m.text}</MessageMarkdown>
+                        <div className="flex items-center gap-1.5 pt-2">
+                          <CopyButton text={m.text} />
+                          <button
+                            title="Good response"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+                          >
+                            <ThumbsUp className="size-4" />
+                          </button>
+                          <button
+                            title="Bad response"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+                          >
+                            <ThumbsDown className="size-4" />
+                          </button>
+                          <button
+                            title="Share"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+                          >
+                            <Export className="size-4" />
+                          </button>
+                          <button
+                            title="Regenerate"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors disabled:opacity-50"
+                            disabled={pending}
+                            onClick={() => void onRegenerate(m._id)}
+                          >
+                            <ArrowsClockwise className={cn("size-4", pending && "animate-spin")} />
+                          </button>
+                          <button
+                            title="More"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+                          >
+                            <DotsThree className="size-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="whitespace-pre-wrap">{m.text}</p>
+                    )}
+                    {m.imageStorageIds?.length ? (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {m.imageStorageIds.length} attachment(s)
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+              <div ref={bottomRef} />
             </div>
           )}
-        </footer>
+        </ScrollArea>
+
+        {!isEmpty && (
+          <footer className="border-border/80 bg-background/80 supports-backdrop-filter:bg-background/60 sticky bottom-0 border-t px-3 py-3 backdrop-blur">
+            {!effectiveChatId ? (
+              <p className="text-muted-foreground text-center text-sm">
+                Create a chat to start messaging.
+              </p>
+            ) : (
+              <ChatInput
+                images={images}
+                draft={draft}
+                setDraft={setDraft}
+                pending={pending}
+                onSend={onSend}
+                onPickImage={onPickImage}
+                fileInputRef={fileInputRef}
+              />
+            )}
+          </footer>
+        )}
       </div>
     </div>
   );
 }
+
+function ChatInput({
+  isCentered = false,
+  images,
+  draft,
+  setDraft,
+  pending,
+  onSend,
+  onPickImage,
+  fileInputRef,
+}: {
+  isCentered?: boolean;
+  images: Id<"_storage">[];
+  draft: string;
+  setDraft: (v: string) => void;
+  pending: boolean;
+  onSend: () => void;
+  onPickImage: (file: File | null) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  return (
+    <div className={cn("flex w-full flex-col gap-2", isCentered ? "max-w-2xl" : "mx-auto max-w-3xl")}>
+      {images.length > 0 ? (
+        <p className="text-muted-foreground text-xs">{images.length} image(s) ready to send</p>
+      ) : null}
+      <div className={cn("flex gap-2", isCentered && "items-end")}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => void onPickImage(e.target.files?.[0] ?? null)}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="shrink-0"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <ImageIcon className="size-5" weight="bold" />
+        </Button>
+        <Textarea
+          rows={isCentered ? 4 : 3}
+          placeholder="Message…"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className={cn(
+            "flex-1 resize-none",
+            isCentered ? "min-h-[120px] text-base" : "min-h-[80px]",
+          )}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void onSend();
+            }
+          }}
+        />
+        <Button
+          type="button"
+          size="icon"
+          className="shrink-0 self-end"
+          disabled={pending}
+          onClick={() => void onSend()}
+          title="Send"
+        >
+          <PaperPlaneRight className="size-5" weight="fill" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 
 function ChatSidebarList({
   chats,
   activeChatId,
   onSelect,
   onNew,
+  onDelete,
 }: {
   chats: Array<{ _id: Id<"chats">; title: string; updatedAt: number }>;
   activeChatId: Id<"chats"> | null;
   onSelect: (id: Id<"chats">) => void;
   onNew: () => void;
+  onDelete: (id: Id<"chats">) => void;
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -436,16 +606,27 @@ function ChatSidebarList({
       <ScrollArea className="min-h-0 flex-1">
         <ul className="space-y-0.5 px-2 pb-4">
           {chats.map((c) => (
-            <li key={c._id}>
+            <li key={c._id} className="group relative">
               <button
                 type="button"
                 onClick={() => onSelect(c._id)}
                 className={cn(
-                  "hover:bg-muted/80 w-full rounded-md px-2 py-2 text-left text-sm",
+                  "hover:bg-muted/80 w-full rounded-md px-2 py-2 pr-8 text-left text-sm",
                   activeChatId === c._id && "bg-muted",
                 )}
               >
                 <span className="line-clamp-2">{c.title}</span>
+              </button>
+              <button
+                type="button"
+                title="Delete chat"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(c._id);
+                }}
+                className="text-muted-foreground hover:text-destructive absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
+              >
+                <Trash className="size-4" />
               </button>
             </li>
           ))}

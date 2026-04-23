@@ -42,6 +42,9 @@ export const completeTurn = action({
     });
 
     const settings = await ctx.runQuery(api.settings.get, {});
+    if (!settings) {
+      throw new Error("User settings not found");
+    }
     const history = await ctx.runQuery(internal.messages.listForModel, {
       userId,
       chatId: args.chatId,
@@ -69,7 +72,7 @@ export const completeTurn = action({
       },
     });
 
-    const modelId = chat?.modelId ?? settings.modelId ?? "openai/gpt-4o-mini";
+    const modelId = chat?.modelId ?? settings.modelId ?? "google/gemini-2.0-flash-lite-preview-02-05:free";
 
     const system = [
       settings.systemPrompt,
@@ -204,6 +207,99 @@ async function maybeGenerateChatTitle({
       title,
     });
   } catch {
-    // Title generation should never break the main reply flow.
+  // Title generation should never break the main reply flow.
   }
-}
+  }
+
+  export const regenerate = action({
+  args: {
+  chatId: v.id("chats"),
+  messageId: v.id("messages"),
+  },
+  handler: async (ctx, args) => {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity?.subject) {
+    throw new Error("Unauthorized");
+  }
+  const userId = identity.subject;
+
+  await ctx.runMutation(internal.messages.truncateAfter, {
+    userId,
+    chatId: args.chatId,
+    messageId: args.messageId,
+  });
+
+  const settings = await ctx.runQuery(api.settings.get, {});
+  if (!settings) {
+    throw new Error("User settings not found");
+  }
+  const history = await ctx.runQuery(internal.messages.listForModel, {
+    userId,
+    chatId: args.chatId,
+    limit: HISTORY_LIMIT,
+  });
+  const chat = await ctx.runQuery(api.chats.get, { chatId: args.chatId });
+
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    await ctx.runMutation(internal.messages.insertAssistant, {
+      userId,
+      chatId: args.chatId,
+      text: "Add OPENROUTER_API_KEY to enable replies.",
+    });
+    return { ok: false as const, reason: "missing_api_key" };
+  }
+
+  const openrouter = createOpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey,
+    headers: {
+      "HTTP-Referer": process.env.SITE_URL ?? "http://localhost:3000",
+      "X-Title": "xai",
+    },
+  });
+
+  const modelId = chat?.modelId ?? settings.modelId ?? "google/gemini-2.0-flash-lite-preview-02-05:free";
+
+  const system = [
+    settings.systemPrompt,
+    "",
+    `Personality / tone: ${settings.personality}`,
+  ].join("\n");
+
+  const modelMessages: ModelMessage[] = [];
+  for (let i = 0; i < history.length; i++) {
+    const m = history[i]!;
+    if (m.role === "system") continue;
+    if (m.role === "assistant") {
+      modelMessages.push({ role: "assistant", content: m.text });
+    } else if (m.role === "user") {
+      modelMessages.push({ role: "user", content: m.text });
+    }
+  }
+
+  try {
+    const result = await generateText({
+      model: openrouter.chat(modelId),
+      system,
+      messages: modelMessages,
+      maxOutputTokens: 4096,
+    });
+    await ctx.runMutation(internal.messages.insertAssistant, {
+      userId,
+      chatId: args.chatId,
+      text: result.text,
+    });
+    return { ok: true as const };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Model request failed.";
+    await ctx.runMutation(internal.messages.insertAssistant, {
+      userId,
+      chatId: args.chatId,
+      text: `Error: ${message}`,
+    });
+    return { ok: false as const, reason: "model_error" as const };
+  }
+  },
+  });
+

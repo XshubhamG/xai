@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireUserId } from "./lib/requireUser";
+import { getUserIdOrNull, requireUserId } from "./lib/requireUser";
 
 const TITLE_MAX = 200;
 const MODEL_MAX = 200;
@@ -8,7 +8,10 @@ const MODEL_MAX = 200;
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireUserId(ctx);
+    const userId = await getUserIdOrNull(ctx);
+    if (!userId) {
+      return [];
+    }
     return await ctx.db
       .query("chats")
       .withIndex("by_user_updated", (q) => q.eq("userId", userId))

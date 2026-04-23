@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireUserId } from "./lib/requireUser";
+import { getUserIdOrNull, requireUserId } from "./lib/requireUser";
 
 const PROMPT_MAX = 16_000;
 const PERSONALITY_MAX = 4000;
@@ -8,12 +8,15 @@ const MODEL_MAX = 200;
 
 const DEFAULT_SYSTEM = "You are a concise, helpful assistant.";
 const DEFAULT_PERSONALITY = "Neutral, clear, and friendly.";
-const DEFAULT_MODEL = "openai/gpt-4o-mini";
+const DEFAULT_MODEL = "google/gemini-2.0-flash-lite-preview-02-05:free";
 
 export const get = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireUserId(ctx);
+    const userId = await getUserIdOrNull(ctx);
+    if (!userId) {
+      return null;
+    }
     const existing = await ctx.db
       .query("userSettings")
       .withIndex("by_user", (q) => q.eq("userId", userId))

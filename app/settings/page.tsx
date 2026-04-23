@@ -160,7 +160,7 @@ export default function SettingsPage() {
     );
   }
 
-  if (viewer === null) {
+  if (viewer === null || settings === null) {
     router.replace("/sign-in");
     return null;
   }
