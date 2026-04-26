@@ -1,7 +1,7 @@
 "use node";
 
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateText, type ModelMessage } from "ai";
+import { generateText, streamText, type ModelMessage } from "ai";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { api, internal } from "./_generated/api";
@@ -128,17 +128,43 @@ export const completeTurn = action({
     }
 
     try {
-      const result = await generateText({
+      const result = await streamText({
         model: openrouter.chat(modelId),
         system,
         messages: modelMessages,
         maxOutputTokens: 4096,
       });
-      await ctx.runMutation(internal.messages.insertAssistant, {
+
+      const messageId = await ctx.runMutation(internal.messages.insertAssistant, {
         userId,
         chatId: args.chatId,
-        text: result.text,
+        text: "",
       });
+
+      let fullText = "";
+      let lastUpdate = Date.now();
+
+      for await (const chunk of result.textStream) {
+        fullText += chunk;
+        const now = Date.now();
+        if (now - lastUpdate > 250) {
+          await ctx.runMutation(internal.messages.updateAssistant, {
+            userId,
+            chatId: args.chatId,
+            messageId,
+            text: fullText,
+          });
+          lastUpdate = now;
+        }
+      }
+
+      await ctx.runMutation(internal.messages.updateAssistant, {
+        userId,
+        chatId: args.chatId,
+        messageId,
+        text: fullText,
+      });
+
       if (chat?.title === DEFAULT_CHAT_TITLE) {
         await maybeGenerateChatTitle({
           ctx,
@@ -146,7 +172,7 @@ export const completeTurn = action({
           openrouter,
           modelId,
           userText: trimmed || displayText,
-          assistantText: result.text,
+          assistantText: fullText,
         });
       }
       return { ok: true as const };
@@ -279,17 +305,43 @@ async function maybeGenerateChatTitle({
   }
 
   try {
-    const result = await generateText({
+    const result = await streamText({
       model: openrouter.chat(modelId),
       system,
       messages: modelMessages,
       maxOutputTokens: 4096,
     });
-    await ctx.runMutation(internal.messages.insertAssistant, {
+
+    const messageId = await ctx.runMutation(internal.messages.insertAssistant, {
       userId,
       chatId: args.chatId,
-      text: result.text,
+      text: "",
     });
+
+    let fullText = "";
+    let lastUpdate = Date.now();
+
+    for await (const chunk of result.textStream) {
+      fullText += chunk;
+      const now = Date.now();
+      if (now - lastUpdate > 250) {
+        await ctx.runMutation(internal.messages.updateAssistant, {
+          userId,
+          chatId: args.chatId,
+          messageId,
+          text: fullText,
+        });
+        lastUpdate = now;
+      }
+    }
+
+    await ctx.runMutation(internal.messages.updateAssistant, {
+      userId,
+      chatId: args.chatId,
+      messageId,
+      text: fullText,
+    });
+
     return { ok: true as const };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Model request failed.";

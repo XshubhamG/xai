@@ -49,7 +49,22 @@ function PreComponent({ children }: React.ComponentPropsWithoutRef<"pre">) {
 
 export function MessageMarkdown({ children }: MessageMarkdownProps) {
   return (
-    <div className="max-w-none space-y-3 text-sm leading-7 [&_a]:text-primary [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-border [&_blockquote]:pl-4 [&_code]:rounded-md [&_code]:bg-background/70 [&_code]:px-1.5 [&_code]:py-0.5 [&_li]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:whitespace-pre-wrap [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-border [&_th]:bg-background/60 [&_th]:px-2 [&_th]:py-1.5 [&_ul]:list-disc [&_ul]:space-y-1">
+    <div className="max-w-none text-base leading-relaxed text-foreground/90 
+      [&_a]:text-primary [&_a]:font-semibold [&_a]:underline [&_a:hover]:text-primary/80 
+      [&_blockquote]:border-l-4 [&_blockquote]:border-primary/30 [&_blockquote]:bg-primary/5 [&_blockquote]:py-2 [&_blockquote]:pl-4 [&_blockquote]:rounded-r-lg 
+      [&_code]:rounded-md [&_code]:bg-hl-bg-dim/50 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-sm 
+      [&_h1]:text-2xl [&_h1]:font-semibold [&_h1]:mb-4 [&_h1]:mt-6
+      [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:mb-4 [&_h2]:mt-6
+      [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:mb-3 [&_h3]:mt-5
+      [&_h4]:text-base [&_h4]:font-semibold [&_h4]:mb-3 [&_h4]:mt-5
+      [&_li]:mt-1 
+      [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-2 
+      [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2 
+      [&_table]:w-full [&_table]:border-collapse [&_table]:my-4 
+      [&_td]:border [&_td]:border-border/40 [&_td]:px-3 [&_td]:py-2 
+      [&_th]:border [&_th]:border-border/40 [&_th]:bg-muted/50 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:font-semibold
+      [&_p]:mb-4 last:[&_p]:mb-0
+      ">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}

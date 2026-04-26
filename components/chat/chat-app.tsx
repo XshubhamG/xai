@@ -5,6 +5,7 @@ import {
   ChatCircle,
   ChatsTeardrop,
   Check,
+  Compass,
   Copy,
   DotsThree,
   Export,
@@ -273,11 +274,13 @@ export function ChatApp() {
   const isEmpty = !messages || messages.length === 0;
 
   return (
-    <div className="bg-background flex min-h-svh w-full max-w-full overflow-x-hidden flex-col md:flex-row">
-      <aside className="border-border/80 hidden h-svh w-72 shrink-0 flex-col border-r md:flex">
-        <div className="flex items-center gap-2 border-b px-3 py-3">
-          <ChatsTeardrop className="size-5" weight="duotone" />
-          <span className="font-heading font-medium">Chats</span>
+    <div className="landing-shell flex h-svh w-full max-w-full overflow-hidden flex-col md:flex-row selection:bg-primary/20">
+      <aside className="border-border/50 hidden h-svh w-72 shrink-0 flex-col border-r md:flex bg-card/20 backdrop-blur-md">
+        <div className="flex items-center gap-3 border-b border-border/40 px-5 py-4 bg-background/40">
+          <div className="landing-badge flex size-8 items-center justify-center rounded-lg shadow-sm">
+            <ChatsTeardrop className="size-5 text-primary" weight="duotone" />
+          </div>
+          <span className="font-heading font-semibold tracking-tight text-foreground/80">Threads</span>
         </div>
         <ChatSidebarList
           chats={chats ?? []}
@@ -288,17 +291,20 @@ export function ChatApp() {
         />
       </aside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="border-border/80 flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col relative">
+        <header className="sticky top-0 z-50 flex items-center gap-2 border-b border-border/40 bg-background/80 px-4 py-2.5 backdrop-blur-xl shadow-sm">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="md:hidden">
-                <ChatsTeardrop className="size-5" weight="bold" />
+              <Button variant="ghost" size="icon" className="md:hidden hover:bg-primary/10 hover:text-primary">
+                <ChatsTeardrop className="size-5" weight="duotone" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0">
-              <SheetHeader className="border-border/80 border-b px-4 py-3 text-left">
-                <SheetTitle className="font-heading text-base">Chats</SheetTitle>
+            <SheetContent side="left" className="w-72 p-0 bg-card/95 backdrop-blur-xl border-r-border/50">
+              <SheetHeader className="border-b border-border/50 px-4 py-4 text-left">
+                <SheetTitle className="font-heading text-lg flex items-center gap-2">
+                   <ChatsTeardrop className="size-6 text-primary" weight="duotone" />
+                   Chats
+                </SheetTitle>
               </SheetHeader>
               <ChatSidebarList
                 chats={chats ?? []}
@@ -312,21 +318,24 @@ export function ChatApp() {
             </SheetContent>
           </Sheet>
 
-          <div className="flex min-w-0 flex-1 items-center gap-2">
-            <ChatCircle className="text-muted-foreground size-5 shrink-0" weight="duotone" />
-            <h1 className="font-heading truncate text-base font-medium">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="landing-badge hidden sm:flex size-8 items-center justify-center rounded-lg shadow-sm">
+               <ChatCircle className="size-5 text-primary" weight="duotone" />
+            </div>
+            <h1 className="font-heading truncate text-base font-semibold tracking-tight text-foreground/90">
               {activeChat?.title ?? "Select or start a chat"}
             </h1>
           </div>
 
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-1.5">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="max-w-44 justify-between">
-                  <span className="truncate">{selectedModelId}</span>
+                <Button variant="outline" size="sm" className="h-9 px-3 border-border/60 bg-background/50 backdrop-blur-md hover:bg-muted/80 font-medium rounded-xl">
+                  <span className="truncate max-w-[120px]">{selectedModelId}</span>
+                  <div className="ml-2 size-1.5 rounded-full bg-hl-green shadow-[0_0_8px_rgba(141,161,1,0.5)]"></div>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-72">
+              <DropdownMenuContent align="end" className="w-64 p-1.5 rounded-xl border-border/50 shadow-xl bg-popover/95 backdrop-blur-xl">
                 <DropdownMenuRadioGroup
                   value={selectedModelId}
                   onValueChange={(value) => {
@@ -334,23 +343,24 @@ export function ChatApp() {
                   }}
                 >
                   {MODEL_SUGGESTIONS.map((modelId) => (
-                    <DropdownMenuRadioItem key={modelId} value={modelId}>
+                    <DropdownMenuRadioItem key={modelId} value={modelId} className="rounded-lg py-2 cursor-pointer">
                       {modelId}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
               </DropdownMenuContent>
             </DropdownMenu>
+            
             <Button
               variant="outline"
               size="sm"
-              className="text-muted-foreground relative hidden h-9 w-full max-w-[220px] justify-start rounded-[0.5rem] text-sm font-normal sm:flex"
+              className="text-muted-foreground relative hidden h-9 w-10 md:w-48 justify-start rounded-xl border-border/60 bg-background/50 backdrop-blur-md px-3 font-normal sm:flex hover:bg-muted/80 transition-colors"
               onClick={() => setSearchOpen(true)}
             >
-              <MagnifyingGlass className="mr-2 size-4" />
-              <span>Search messages…</span>
-              <kbd className="bg-muted pointer-events-none absolute right-[0.3rem] top-[0.3rem] hidden h-6 select-none items-center gap-1 rounded border px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
-                <span className="text-xs">⌘</span>K
+              <MagnifyingGlass className="size-4 md:mr-2" />
+              <span className="hidden md:inline">Search messages…</span>
+              <kbd className="bg-muted pointer-events-none absolute right-[0.4rem] top-[0.4rem] hidden h-5.5 select-none items-center gap-1 rounded border border-border/50 px-1.5 font-mono text-[9px] font-bold opacity-80 sm:flex">
+                ⌘K
               </kbd>
             </Button>
 
@@ -399,10 +409,15 @@ export function ChatApp() {
 
         <ScrollArea className="min-h-0 flex-1">
           {isEmpty ? (
-            <div className="flex min-h-[calc(100svh-120px)] flex-col items-center justify-center px-6">
-              <div className="mb-8 flex flex-col items-center gap-4 text-center">
-                <ChatCircle className="text-muted-foreground size-12" weight="duotone" />
-                <h2 className="font-heading text-2xl font-medium">How can I help you today?</h2>
+            <div className="flex min-h-[calc(100svh-140px)] flex-col items-center justify-center px-6">
+              <div className="mb-10 flex flex-col items-center gap-5 text-center">
+                <div className="landing-badge flex size-16 items-center justify-center rounded-2xl shadow-lg border-primary/20 bg-primary/5">
+                  <ChatCircle className="size-10 text-primary" weight="duotone" />
+                </div>
+                <div className="space-y-2">
+                  <h2 className="font-heading text-3xl font-semibold tracking-tight">How can I help you today?</h2>
+                  <p className="text-muted-foreground font-medium">Start a new conversation or select a thread from the sidebar.</p>
+                </div>
               </div>
               <ChatInput
                 isCentered
@@ -416,82 +431,88 @@ export function ChatApp() {
               />
             </div>
           ) : (
-            <div className="mx-auto max-w-3xl space-y-8 px-3 py-4 pb-20">
+            <div className="mx-auto max-w-4xl space-y-8 px-4 py-8 pb-32">
               {(messages ?? []).map((m) => (
                 <div
                   key={m._id}
-                  className={cn("flex flex-col gap-2", m.role === "user" ? "items-end" : "items-start")}
+                  className={cn("flex flex-col gap-3", m.role === "user" ? "items-end" : "items-start")}
                 >
                   <div
                     className={cn(
-                      "text-sm leading-relaxed break-words overflow-wrap-anywhere",
+                      "transition-all duration-300",
                       m.role === "user"
-                        ? "bg-primary text-primary-foreground max-w-[85%] rounded-2xl px-3 py-2"
-                        : "text-foreground w-full",
+                        ? "landing-message shadow-sm self-end rounded-2xl rounded-tr-sm max-w-[85%] md:max-w-[80%] border-transparent bg-[#9fb67e] text-[#2f363d]"
+                        : "self-start w-full text-foreground/90",
                     )}
                   >
                     {m.role === "assistant" ? (
-                      <div className="space-y-4">
+                      <div className="space-y-4 py-2">
                         <MessageMarkdown>{m.text}</MessageMarkdown>
-                        <div className="flex items-center gap-1.5 pt-2">
+                        <div className="flex items-center gap-1 pt-3 border-t border-border/10 opacity-50 hover:opacity-100 transition-opacity">
                           <CopyButton text={m.text} />
                           <button
                             title="Good response"
-                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-1.5 transition-colors"
                           >
                             <ThumbsUp className="size-4" />
                           </button>
                           <button
                             title="Bad response"
-                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-1.5 transition-colors"
                           >
                             <ThumbsDown className="size-4" />
                           </button>
                           <button
                             title="Share"
-                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-1.5 transition-colors"
                           >
                             <Export className="size-4" />
                           </button>
                           <button
                             title="Regenerate"
-                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors disabled:opacity-50"
+                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-lg p-1.5 transition-colors disabled:opacity-50"
                             disabled={pending}
                             onClick={() => void onRegenerate(m._id)}
                           >
                             <ArrowsClockwise className={cn("size-4", pending && "animate-spin")} />
                           </button>
-                          <button
-                            title="More"
-                            className="text-muted-foreground hover:bg-muted hover:text-foreground rounded p-1 transition-colors"
-                          >
-                            <DotsThree className="size-4" />
-                          </button>
                         </div>
                       </div>
                     ) : (
-                      <p className="whitespace-pre-wrap">{m.text}</p>
+                      <p className="whitespace-pre-wrap text-base font-medium">{m.text}</p>
                     )}
                     {m.imageStorageIds?.length ? (
-                      <p className="text-muted-foreground mt-1 text-xs">
-                        {m.imageStorageIds.length} attachment(s)
-                      </p>
+                      <div className="mt-3 pt-3 border-t border-black/10 flex flex-wrap gap-2">
+                        {m.imageStorageIds.map((sid) => (
+                          <div key={sid} className="bg-black/10 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-black/80">
+                            Attachment
+                          </div>
+                        ))}
+                      </div>
                     ) : null}
                   </div>
                 </div>
               ))}
+              {pending && (
+                <div className="flex flex-col gap-3 items-start animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-2.5 py-3">
+                    <div className="flex gap-1.5">
+                      <div className="size-1.5 rounded-full bg-primary/50 animate-bounce [animation-delay:-0.3s]"></div>
+                      <div className="size-1.5 rounded-full bg-primary/50 animate-bounce [animation-delay:-0.15s]"></div>
+                      <div className="size-1.5 rounded-full bg-primary/50 animate-bounce"></div>
+                    </div>
+                    <span className="text-xs font-semibold tracking-wide text-muted-foreground/60 uppercase">Thinking</span>
+                  </div>
+                </div>
+              )}
               <div ref={bottomRef} />
             </div>
           )}
         </ScrollArea>
 
-        {!isEmpty && (
-          <footer className="border-border/80 bg-background/80 supports-backdrop-filter:bg-background/60 sticky bottom-0 border-t px-3 py-3 backdrop-blur">
-            {!effectiveChatId ? (
-              <p className="text-muted-foreground text-center text-sm">
-                Create a chat to start messaging.
-              </p>
-            ) : (
+        <footer className="absolute bottom-0 left-0 right-0 z-20 p-4 md:p-6 bg-gradient-to-t from-background via-background/90 to-transparent pointer-events-none">
+          <div className="mx-auto max-w-4xl pointer-events-auto">
+            {!isEmpty && (
               <ChatInput
                 images={images}
                 draft={draft}
@@ -502,8 +523,8 @@ export function ChatApp() {
                 fileInputRef={fileInputRef}
               />
             )}
-          </footer>
-        )}
+          </div>
+        </footer>
       </div>
     </div>
   );
@@ -529,54 +550,101 @@ function ChatInput({
   fileInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
-    <div className={cn("flex w-full flex-col gap-2", isCentered ? "max-w-2xl" : "mx-auto max-w-3xl")}>
-      {images.length > 0 ? (
-        <p className="text-muted-foreground text-xs">{images.length} image(s) ready to send</p>
-      ) : null}
-      <div className={cn("flex gap-2", isCentered && "items-end")}>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => void onPickImage(e.target.files?.[0] ?? null)}
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="icon"
-          className="shrink-0"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <ImageIcon className="size-5" weight="bold" />
-        </Button>
-        <Textarea
-          rows={isCentered ? 4 : 3}
-          placeholder="Message…"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          className={cn(
-            "flex-1 resize-none",
-            isCentered ? "min-h-[120px] text-base" : "min-h-[80px]",
-          )}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              void onSend();
-            }
-          }}
-        />
-        <Button
-          type="button"
-          size="icon"
-          className="shrink-0 self-end"
-          disabled={pending}
-          onClick={() => void onSend()}
-          title="Send"
-        >
-          <PaperPlaneRight className="size-5" weight="fill" />
-        </Button>
+    <div className={cn("flex w-full flex-col gap-3", isCentered ? "max-w-2xl" : "w-full")}>
+      <div className="relative">
+        {images.length > 0 && (
+          <div className="absolute -top-12 left-0 flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2">
+            {images.map((id) => (
+              <div key={id} className="bg-primary/10 text-primary border border-primary/20 backdrop-blur-md rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                <ImageIcon className="size-3" weight="bold" />
+                Image Ready
+              </div>
+            ))}
+          </div>
+        )}
+        
+        <div className={cn(
+          "bg-card/80 backdrop-blur-xl border border-border/60 rounded-2xl p-2 flex flex-col gap-2 shadow-xl shadow-black/5 transition-all duration-300 focus-within:border-primary/40 focus-within:shadow-primary/5",
+          isCentered ? "p-3" : "p-2"
+        )}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => void onPickImage(e.target.files?.[0] ?? null)}
+          />
+          
+          <Textarea
+            rows={isCentered ? 4 : 1}
+            placeholder="Message xai..."
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            className={cn(
+              "flex-1 resize-none bg-transparent border-none focus-visible:ring-0 text-foreground placeholder:text-muted-foreground/60 font-medium px-3 py-2",
+              isCentered ? "min-h-[120px] text-lg" : "min-h-[44px] text-base",
+            )}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void onSend();
+              }
+            }}
+          />
+          
+          <div className="flex items-center justify-between px-1 pb-1">
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-xl text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+                title="Upload Image"
+              >
+                <ImageIcon className="size-5" weight="duotone" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-9 rounded-xl text-muted-foreground hover:text-hl-aqua hover:bg-hl-aqua/10 transition-colors"
+                title="Discovery"
+              >
+                <Compass className="size-5" weight="duotone" />
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              {draft.length > 0 && (
+                <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest hidden sm:block">
+                  {draft.length} chars
+                </span>
+              )}
+              <Button
+                type="button"
+                size="icon"
+                className="size-9 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+                disabled={pending || (!draft.trim() && images.length === 0)}
+                onClick={() => void onSend()}
+                title="Send Message"
+              >
+                <PaperPlaneRight className="size-5" weight="fill" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
+      
+      {!isCentered && (
+        <div className="flex items-center justify-center gap-4 text-[9px] text-muted-foreground/50 uppercase tracking-[0.2em] font-bold px-4">
+           <span>OpenRouter</span>
+           <div className="size-1 rounded-full bg-border/60"></div>
+           <span>Multimodal</span>
+           <div className="size-1 rounded-full bg-border/60"></div>
+           <span>Search-ready</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -597,25 +665,25 @@ function ChatSidebarList({
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="p-2">
-        <Button className="w-full gap-1" variant="secondary" onClick={onNew}>
+      <div className="p-4">
+        <Button className="w-full gap-2 rounded-xl shadow-md shadow-primary/10 font-semibold" variant="secondary" onClick={onNew}>
           <Plus className="size-4" weight="bold" />
-          New chat
+          New Thread
         </Button>
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <ul className="space-y-0.5 px-2 pb-4">
+        <ul className="space-y-1 px-3 pb-6">
           {chats.map((c) => (
             <li key={c._id} className="group relative">
               <button
                 type="button"
                 onClick={() => onSelect(c._id)}
                 className={cn(
-                  "hover:bg-muted/80 w-full rounded-md px-2 py-2 pr-8 text-left text-sm",
-                  activeChatId === c._id && "bg-muted",
+                  "hover:bg-muted/60 w-full rounded-xl px-3 py-2.5 pr-10 text-left text-sm transition-all duration-200",
+                  activeChatId === c._id ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20 shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <span className="line-clamp-2">{c.title}</span>
+                <span className="line-clamp-1">{c.title}</span>
               </button>
               <button
                 type="button"
@@ -624,7 +692,7 @@ function ChatSidebarList({
                   e.stopPropagation();
                   onDelete(c._id);
                 }}
-                className="text-muted-foreground hover:text-destructive absolute right-1 top-1/2 -translate-y-1/2 rounded p-1 opacity-0 transition-opacity group-hover:opacity-100"
+                className="text-muted-foreground hover:text-destructive absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 opacity-0 transition-all group-hover:opacity-100 hover:bg-destructive/10"
               >
                 <Trash className="size-4" />
               </button>

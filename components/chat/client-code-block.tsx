@@ -54,18 +54,21 @@ export function ClientCodeBlock({ code, lang = "text" }: ClientCodeBlockProps) {
   };
 
   return (
-    <div className="group my-4 overflow-hidden rounded-xl border border-border/80 bg-background/50">
-      <div className="flex items-center justify-between border-b border-border/80 bg-muted/30 px-4 py-2">
-        <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-          {lang}
-        </span>
+    <div className="group my-6 overflow-hidden rounded-2xl border border-border/40 bg-card/40 backdrop-blur-md shadow-xl shadow-black/5">
+      <div className="flex items-center justify-between border-b border-border/40 bg-muted/20 px-4 py-2.5">
+        <div className="flex items-center gap-2">
+          <div className="size-2 rounded-full bg-primary/40"></div>
+          <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-[0.2em]">
+            {lang}
+          </span>
+        </div>
         <button
           onClick={onCopy}
-          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5 text-xs transition-colors"
+          className="text-muted-foreground hover:text-primary flex items-center gap-2 text-xs font-semibold transition-all hover:bg-primary/5 px-2 py-1 rounded-lg"
         >
           {copied ? (
             <>
-              <Check className="size-3.5" weight="bold" />
+              <Check className="size-3.5 text-primary" weight="bold" />
               <span>Copied</span>
             </>
           ) : (

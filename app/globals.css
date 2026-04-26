@@ -238,3 +238,84 @@
     line-height: 1.7;
   }
 }
+
+@layer components {
+  .landing-shell {
+    position: relative;
+    background:
+      radial-gradient(circle at top left, color-mix(in oklab, var(--color-hl-bg-green) 58%, transparent) 0, transparent 34%),
+      radial-gradient(circle at top right, color-mix(in oklab, var(--color-hl-bg-yellow) 52%, transparent) 0, transparent 28%),
+      linear-gradient(180deg, color-mix(in oklab, var(--color-background) 88%, var(--color-hl-bg1)) 0%, var(--color-background) 100%);
+  }
+
+  .landing-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--color-border) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--color-border) 40%, transparent) 1px, transparent 1px);
+    background-size: 72px 72px;
+    opacity: 0.22;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 85%);
+  }
+
+  .landing-panel {
+    border: 1px solid color-mix(in oklab, var(--color-border) 78%, transparent);
+    background: color-mix(in oklab, var(--color-card) 88%, transparent);
+    box-shadow:
+      0 1px 0 color-mix(in oklab, var(--color-background) 35%, transparent) inset,
+      0 24px 60px -36px color-mix(in oklab, var(--color-hl-bg-dim) 50%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .landing-preview {
+    border: 1px solid color-mix(in oklab, var(--color-border) 82%, transparent);
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--color-card) 94%, transparent), color-mix(in oklab, var(--color-hl-bg0) 90%, transparent)),
+      linear-gradient(135deg, color-mix(in oklab, var(--color-hl-bg-green) 35%, transparent), transparent 55%);
+    box-shadow:
+      0 1px 0 color-mix(in oklab, var(--color-background) 45%, transparent) inset,
+      0 40px 80px -48px color-mix(in oklab, var(--color-hl-bg-dim) 70%, transparent);
+  }
+
+  .landing-inset {
+    border: 1px solid color-mix(in oklab, var(--color-border) 84%, transparent);
+    background: color-mix(in oklab, var(--color-background) 72%, var(--color-card));
+  }
+
+  .landing-badge {
+    border: 1px solid color-mix(in oklab, var(--color-border) 80%, transparent);
+    background: color-mix(in oklab, var(--color-background) 66%, var(--color-card));
+  }
+
+  .landing-kicker {
+    width: fit-content;
+    border-bottom: 1px solid color-mix(in oklab, var(--color-primary) 38%, transparent);
+    padding-bottom: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+    color: color-mix(in oklab, var(--color-foreground) 70%, var(--color-primary));
+  }
+
+  .landing-message-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .landing-message {
+    border: 1px solid color-mix(in oklab, var(--color-border) 86%, transparent);
+    background: color-mix(in oklab, var(--color-background) 78%, var(--color-card));
+    padding: 1.25rem 1.5rem;
+    box-shadow: 0 16px 36px -28px color-mix(in oklab, var(--color-hl-bg-dim) 65%, transparent);
+  }
+
+  .landing-message-primary {
+    border-color: color-mix(in oklab, var(--color-primary) 45%, var(--color-border));
+    background: color-mix(in oklab, var(--color-hl-bg-green) 55%, var(--color-card));
+  }
+}

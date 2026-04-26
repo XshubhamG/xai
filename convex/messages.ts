@@ -4,7 +4,7 @@ import {
   internalQuery,
   query,
 } from "./_generated/server";
-import { getUserIdOrNull, requireUserId } from "./lib/requireUser";
+import { getUserIdOrNull } from "./lib/requireUser";
 
 const TEXT_MAX = 32_000;
 
@@ -182,5 +182,25 @@ export const truncateAfter = internalMutation({
     for (const m of toDelete) {
       await ctx.db.delete(m._id);
     }
+  },
+});
+
+export const updateAssistant = internalMutation({
+  args: {
+    userId: v.string(),
+    chatId: v.id("chats"),
+    messageId: v.id("messages"),
+    text: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const chat = await ctx.db.get(args.chatId);
+    if (!chat || chat.userId !== args.userId) {
+      throw new Error("Chat not found");
+    }
+    const body = args.text.slice(0, TEXT_MAX);
+    await ctx.db.patch(args.messageId, {
+      text: body,
+    });
+    await ctx.db.patch(args.chatId, { updatedAt: Date.now() });
   },
 });
